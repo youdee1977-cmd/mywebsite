@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ambulans KIF Medan — WebView</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<meta name="theme-color" content="#003366">
+<style>
+:root { --brand: #003366; --accent: #4CAF50; }
+html,body { height:100%; font-family: 'Inter', sans-serif; }
+.loader { border:4px solid #f3f3f3; border-top:4px solid var(--brand); border-radius:50%; width:40px; height:40px; animation:spin 1s linear infinite; }
+@keyframes spin { 0%{transform:rotate(0)}100%{transform:rotate(360deg)} }
+.hidden-by-default { display:none; }
+body { -webkit-tap-highlight-color: transparent; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+</style>
+</head>
+<body class="bg-gradient-to-b from-sky-100 to-gray-50 text-gray-800 min-h-screen">
+
+<div id="loading-screen" class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-4">
+<div class="loader"></div>
+<p class="mt-4 text-gray-600">Memuat aplikasi...</p>
+</div>
+
+<div id="app-container" class="hidden min-h-screen flex flex-col">
+<header class="bg-white shadow-md sticky top-0 z-40">
+<div class="container mx-auto px-4 py-3 flex justify-between items-center">
+<div class="flex items-center gap-3">
+<i data-lucide="ambulance" class="h-8 w-8 text-[#003366]"></i>
+<h1 class="text-lg font-bold text-[#003366]">Ambulans KIF Medan</h1>
+</div>
+<div class="flex items-center gap-2">
+<button id="lang-id" class="px-3 py-1 text-sm font-semibold bg-gray-200 rounded-md">ID</button>
+<button id="lang-en" class="px-3 py-1 text-sm">EN</button>
+<button id="admin-login-button" class="p-2 rounded-full hover:bg-gray-100">
+<i data-lucide="user-cog"></i>
+</button>
+</div>
+</div>
+</header>
+
+<main class="flex-1">
+<section id="user-view" class="container mx-auto p-4">
+<div id="booking-form-container" class="max-w-3xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
+<h2 class="text-2xl font-bold text-center mb-4">Formulir Pemesanan Layanan</h2>
+<form id="booking-form" class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-gray-700">Status Pemesan</label>
+<div class="flex items-center gap-6 mt-2">
+<label class="flex items-center gap-2"><input type="radio" name="statusPemesan" value="Umum" checked> Umum</label>
+<label class="flex items-center gap-2"><input type="radio" name="statusPemesan" value="Anggota"> Anggota KIF</label>
+</div>
+</div>
+
+<div id="no-da-container" class="hidden">
+<label class="block text-sm font-medium text-gray-700">No. DA (Anggota)</label>
+<input id="noDa" name="noDa" type="text" class="mt-1 w-full px-4 py-2 border rounded" />
+<p id="member-status-text" class="text-sm mt-1"></p>
+</div>
+
+<div>
+<label class="block text-sm font-medium text-gray-700">Nama Pemohon</label>
+<input id="namaPemohon" name="namaPemohon" required class="mt-1 w-full px-4 py-2 border rounded" />
+</div>
+
+<div>
+<label class="block text-sm font-medium text-gray-700">Nomor HP (WhatsApp)</label>
+<input id="nomorHp" name="nomorHp" required placeholder="0812..." class="mt-1 w-full px-4 py-2 border rounded" />
+</div>
+
+<div>
+<label class="block text-sm font-medium text-gray-700">Alamat Penjemputan</label>
+<input id="lokasiJemput" name="lokasiJemput" required class="mt-1 w-full px-4 py-2 border rounded" placeholder="Ketik alamat lengkap..." />
+</div>
+
+<div>
+<label class="block text-sm font-medium text-gray-700">Lokasi Tujuan</label>
+<input id="lokasiTujuan" name="lokasiTujuan" required class="mt-1 w-full px-4 py-2 border rounded" placeholder="Ketik alamat tujuan..." />
+</div>
+
+<div id="tarif-container" class="hidden bg-green-50 p-3 rounded text-center">
+<p class="text-sm">Estimasi Jarak: <span id="jarak-text" class="font-bold">...</span></p>
+<p class="text-lg font-bold text-[#4CAF50]">Estimasi Tarif: <span id="tarif-text">...</span></p>
+</div>
+
+<button id="submit-button" type="submit" class="w-full py-3 rounded-lg bg-[#4CAF50] text-white font-medium">Kirim Permohonan</button>
+</form>
+</div>
+</section>
+
+<section id="waiting-view" class="hidden container mx-auto p-4 text-center">
+<div class="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-lg">
+<i data-lucide="mail-check" class="mx-auto h-14 w-14 text-[#4CAF50]"></i>
+<h3 class="text-xl font-bold mt-2">Permohonan Terkirim</h3>
+<p class="mt-2 text-gray-600">Operator akan menghubungi via WhatsApp/SMS.</p>
+</div>
+</section>
+
+<section id="admin-login-view" class="hidden container mx-auto p-4">
+<div class="max-w-sm mx-auto bg-white p-6 rounded-2xl shadow-lg">
+<h3 class="text-xl font-bold text-center mb-4">Login Operator</h3>
+<form id="admin-login-form" class="space-y-3">
+<div>
+<label class="block text-sm font-medium text-gray-700">Password</label>
+<input id="password" type="password" class="mt-1 w-full px-4 py-2 border rounded" />
+<p id="login-error" class="text-red-500 text-sm hidden">Password salah.</p>
+</div>
+<button type="submit" class="w-full py-2 bg-[#003366] text-white rounded">Masuk</button>
+</form>
+</div>
+</section>
+
+<section id="admin-dashboard-view" class="hidden container mx-auto p-4">
+<div class="max-w-5xl mx-auto">
+<div class="flex justify-between items-center">
+<h2 class="text-2xl font-bold">Dashboard Operator</h2>
+<button id="logout-button" class="px-3 py-2 bg-red-500 text-white rounded">Keluar</button>
+</div>
+
+<div id="incoming-request-list" class="mt-4 space-y-3">
+</div>
+</div>
+</section>
+</main>
+
+<footer class="bg-gray-800 text-white py-4">
+<div class="container mx-auto text-center text-sm">
+<p>Informasi Hubungi Operator — Sunanda: 0852 9678 5867</p>
+<p class="text-xs text-gray-400 mt-2">Pengembang: Abu Tantra</p>
+</div>
+</footer>
+</div>
+
+<div id="ambulance-busy-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-xl p-6 max-w-sm w-full text-center">
+<i data-lucide="siren" class="h-6 w-6 text-red-600 mx-auto"></i>
+<h3 class="font-bold mt-2">Ambulans Sedang Beroperasi</h3>
+<p class="mt-2 text-sm text-gray-600">Silakan coba beberapa saat lagi.</p>
+<button id="close-busy-modal" class="mt-4 w-full py-2 bg-red-500 text-white rounded">Tutup</button>
+</div>
+</div>
+
+<script type="module">
+/*************************************************************************
+* CONFIGURATION (🔑 Replace placeholders below on your local machine)
+*
+* IMPORTANT:
+* - Do NOT paste keys into public chat.
+* - Replace placeholders in this file on your device before deploy.
+*************************************************************************/
+
+// 🔑 GANTI `MASUKKAN_API_KEY_FIREBASE_DI_SINI` DENGAN firebaseConfig milikmu (di mesinmu)
+const FIREBASE_PLACEHOLDER = {
+apiKey: "MASUKKAN_API_KEY_FIREBASE_DI_SINI",
+authDomain: "MASUKKAN_AUTHDOMAIN_FIREBASE_DI_SINI",
+projectId: "MASUKKAN_PROJECTID_FIREBASE_DI_SINI",
+storageBucket: "MASUKKAN_STORAGEBUCKET_FIREBASE_DI_SINI",
+messagingSenderId: "MASUKKAN_MSG_SENDER_ID_FIREBASE_DI_SINI",
+appId: "MASUKKAN_APPID_FIREBASE_DI_SINI"
+};
+
+// 🔑 GANTI 'YOUR_GRAPH_HOPPER_KEY' DENGAN KEY ASLI DI MESINMU (JANGAN KIRIM VIA CHAT)
+const GRAPH_HOPPER_PLACEHOLDER = "YOUR_GRAPH_HOPPER_KEY";
+
+const firebaseConfig = FIREBASE_PLACEHOLDER;
+const GRAPHHOPPER_API_KEY = GRAPH_HOPPER_PLACEHOLDER;
+
+document.addEventListener("DOMContentLoaded", async () => {
+if (window.lucide) try { lucide.createIcons(); } catch(e){}
+
+// Simple UI helpers
+const dom = {
+loadingScreen: document.getElementById('loading-screen'),
+appContainer: document.getElementById('app-container'),
+bookingForm: document.getElementById('booking-form'),
+incomingRequestList: document.getElementById('incoming-request-list'),
+adminLoginButton: document.getElementById('admin-login-button'),
+adminLoginForm: document.getElementById('admin-login-form'),
+logoutButton: document.getElementById('logout-button'),
+userView: document.getElementById('user-view'),
+adminLoginView: document.getElementById('admin-login-view'),
+adminDashboardView: document.getElementById('admin-dashboard-view')
+};
+
+function show(el){ el.classList.remove('hidden'); }
+function hide(el){ el.classList.add('hidden'); }
+
+// Show app
+hide(dom.loadingScreen);
+show(dom.appContainer);
+
+dom.adminLoginButton.addEventListener('click', ()=> {
+hide(dom.userView);
+show(dom.adminLoginView);
+});
+
+dom.adminLoginForm.addEventListener('submit', (e) => {
+e.preventDefault();
+const pwd = document.getElementById('password').value || '';
+if (pwd === 'kifmedan2024') {
+hide(dom.adminLoginView);
+show(dom.adminDashboardView);
+// try to load from Firestore if configured (function defined below)
+loadRequestsFromFirestore();
+} else {
+document.getElementById('login-error').classList.remove('hidden');
+}
+});
+
+dom.logoutButton.addEventListener('click', ()=> {
+hide(dom.adminDashboardView);
+show(dom.userView);
+});
+
+dom.bookingForm.addEventListener('submit', async (e) => {
+e.preventDefault();
+const fd = new FormData(dom.bookingForm);
+const payload = {
+namaPemohon: fd.get('namaPemohon'),
+nomorHp: fd.get('nomorHp'),
+lokasiJemput: fd.get('lokasiJemput'),
+lokasiTujuan: fd.get('lokasiTujuan'),
+status: 'Menunggu',
+createdAt: new Date().toISOString()
+};
+
+// If firestore available save, otherwise local fallback
+if (typeof firebase !== 'undefined' && firebase.firestore) {
+try {
+const { getFirestore, collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+await addDoc(collection(db, 'requests'), {...payload, createdAt: serverTimestamp()});
+alert('Permohonan terkirim. Operator akan menghubungi.');
+dom.bookingForm.reset();
+} catch (err) {
+console.warn("Firestore write failed:", err);
+saveLocally(payload);
+alert('Gagal kirim ke server. Disimpan lokal.');
+}
+} else {
+saveLocally(payload);
+alert('Permohonan tersimpan lokal (offline).');
+dom.bookingForm.reset();
+}
+});
+
+loadLocalRequestsToUI();
+
+// --- local storage fallback
+function saveLocally(payload){
+const list = JSON.parse(localStorage.getItem('local_requests') || '[]');
+list.unshift(payload);
+localStorage.setItem('local_requests', JSON.stringify(list));
+renderIncomingRequests(list);
+}
+
+function loadLocalRequestsToUI(){
+const list = JSON.parse(localStorage.getItem('local_requests') || '[]');
+renderIncomingRequests(list);
+}
+
+function renderIncomingRequests(list){
+dom.incomingRequestList.innerHTML = '';
+if (!list || list.length === 0){
+dom.incomingRequestList.innerHTML = '<p class="text-center text-gray-500">Belum ada permohonan.</p>';
+return;
+}
+list.forEach((r) => {
+const el = document.createElement('div');
+el.className = 'bg-white p-4 rounded shadow';
+el.innerHTML = `
+<div class="flex justify-between items-start">
+<div>
+<div class="text-sm text-gray-500">${new Date(r.createdAt).toLocaleString()}</div>
+<div class="font-semibold text-lg">${escapeHtml(r.namaPemohon || '—')}</div>
+<div class="text-sm text-gray-600">${escapeHtml(r.nomorHp || '—')}</div>
+<div class="text-sm mt-2">Dari: ${escapeHtml(r.lokasiJemput || '—')} <br/> Ke: ${escapeHtml(r.lokasiTujuan || '—')}</div>
+</div>
+<div class="text-right">
+<button class="approve-btn px-3 py-1 bg-green-500 text-white rounded text-sm">Setujui</button>
+<button class="reject-btn px-3 py-1 mt-2 bg-gray-100 rounded text-sm">Tolak</button>
+</div>
+</div>
+`;
+dom.incomingRequestList.appendChild(el);
+});
+}
+
+async function loadRequestsFromFirestore(){
+try {
+if (!firebaseConfig || firebaseConfig.apiKey.includes("AIzaSyC31mUzijFz8sFa6IUaMLdk7d1yBslPi1Q")) {
+console.warn("Firestore tidak dikonfigurasi (placeholder).");
+return;
+}
+const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+const { getFirestore, collection, query, orderBy, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const q = query(collection(db, 'requests'), orderBy('createdAt', 'desc'));
+onSnapshot(q, snap => {
+const items = [];
+snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+renderIncomingRequests(items);
+});
+} catch (err) {
+console.error("Error Firestore listener:", err);
+}
+}
+
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
+
+// GraphHopper helper (requires real key & lat/lng)
+const hasGraphHopper = typeof GRAPHHOPPER_API_KEY !== 'undefined' && !GRAPHHOPPER_API_KEY.includes('fa5106de-b7fd-45cc-b58b-c8cf18051335');
+async function estimateRouteDistanceMeters(pointA, pointB){
+if (!hasGraphHopper) return null;
+try {
+const url = new URL("https://graphhopper.com/api/1/route");
+url.searchParams.set('point', `${pointA.lat},${pointA.lng}`);
+url.searchParams.append('point', `${pointB.lat},${pointB.lng}`);
+url.searchParams.set('profile', 'car');
+url.searchParams.set('locale', 'id');
+url.searchParams.set('calc_points', 'false');
+url.searchParams.set('key', GRAPHHOPPER_API_KEY);
+const resp = await fetch(url.toString());
+const data = await resp.json();
+if (data && data.paths && data.paths.length) return data.paths[0].distance;
+return null;
+} catch (err) {
+console.error("GraphHopper error:", err);
+return null;
+}
+}
+
+// Final UI readiness (icons)
+try { lucide.createIcons(); } catch(e){}
+});
+</script>
+</body>
+</html>
